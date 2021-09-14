@@ -4,8 +4,11 @@
  * main.c
  */
 
+int sms = 0x36;
+
+
 void init_uart(void){
-    UCA0CLT1 |= UCSWRST|UCSSEL_2;
+    UCA0CTL1 |= UCSWRST|UCSSEL_2;
     UCA0BR0 = 104;
     UCA0BR1 = 0;
     UCA0MCTL = UCBRS_1;
@@ -17,13 +20,30 @@ void init_uart(void){
 void init_i2c(void)
 {
     UCB0CTL1 |= UCSWRST;                    //Software reset
-    UCB0CLT0 |= UCMST|UCMODE_3|UCSYNC;      //Set sync communication, set as master, and put in i2c mode
-    UCB0CLT1 |= UCSSEL_2|UCSWRST;
+    UCB0CTL0 = UCMST|UCMODE_3|UCSYNC;      //Set sync communication, set as master, and put in i2c mode
+    UCB0CTL1 = UCSSEL_2|UCSWRST;
     UCB0BR0 = 10;
     UCB0BR1 = 0;
-    UCB0CTL &= ~UCSWRST;                    //Software reset disabled
+    UCB0CTL1 &= ~UCSWRST;                    //Software reset disabled
     IE2 |= UCB0TXIE;                        //transmit interrupt enabled
 
+}
+
+void txrx(int add){
+    UCB0I2CSA = add;
+    UCB0CTL1 |= UCTR;                           //put in transmit mode
+    UCB0CTL1 |= UCTXSTT;                        //start transmission
+
+    while((UCB0STAT & UCSTPIFG) == 0){           //while transmission interrupt flag is not raised clear flag
+        UCB0STAT &= ~UCSTPIFG;
+    }
+
+    UCB0CTL1 &= ~UCTR;                          //put in receive mode
+    UCB0CTL1 |= UCTXSTT;                        //start transmission
+
+    while((UCB0STAT & UCSTPIFG) == 0){           //while transmission interrupt flag is not raised clear flag
+        UCB0STAT &= ~UCSTPIFG;
+    }
 }
 
 void clk(void){
@@ -56,19 +76,7 @@ int main(void)
     init_uart();
 
     while(1){
-        UBB0CLT1 |= UCTR;                           //put in transmit mode
-        UCB0CLT1 |= UCTXSTT;                        //start transmission
-
-        while((UCB0STAT & UCSTIFG) == 0){           //while transmission interrupt flag is not raised clear flag
-            UCB0STAT &= ~UCSTIFG;
-        }
-
-        UBB0CLT1 &= ~UCTR;                          //put in receive mode
-        UCB0CLT1 |= UCTXSTT;                        //start transmission
-
-        while((UCB0STAT & UCSTIFG) == 0){           //while transmission interrupt flag is not raised clear flag
-            UCB0STAT &= ~UCSTIFG;
-        }
+        txrx(sms);
 
     }
 
