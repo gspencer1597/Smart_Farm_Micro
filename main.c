@@ -5,7 +5,7 @@
  */
 
 int sms = 0x36;
-
+char data[];
 
 void init_uart(void){
     UCA0CTL1 |= UCSWRST|UCSSEL_2;
@@ -26,7 +26,7 @@ void init_i2c(void)
     UCB0BR1 = 0;
     UCB0CTL1 &= ~UCSWRST;                    //Software reset disabled
     IE2 |= UCB0TXIE;                        //transmit interrupt enabled
-
+    __enable_interrupt();
 }
 
 void txrx(int add){
@@ -84,8 +84,19 @@ int main(void)
 }
 
 
-#pragma vector = USCIAB0RX VECTOR
+#pragma vector=USCIAB0TX_VECTOR
 __interrupt void transmit(void){
+//figure out which memory address to read from for each sensor
+    switch(IFG2){
+    case UCB0TXIFG:     //transmit flag raised, figure out what memory address to read from (slave address?)
+        break;
+    case UCBORXIFG:                   //Receive flag raised
+        data = UCB0RXBUF;   //read data from receive buffer
+        break;
+    default:
+    break;
+
+    }
 
 }
 
